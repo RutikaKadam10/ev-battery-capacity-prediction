@@ -1,0 +1,27 @@
+
+# ---- Core data handling ----
+pandas
+numpy
+scikit-learn
+# ---- Visualization (for EDA) ----
+matplotlib
+seaborn
+# ---- Deep learning ----
+# torch includes MPS (Apple Silicon GPU) support automatically on macOS - no separate install needed
+torch
+# ---- Experiment tracking ----
+mlflow
+# ---- Data versioning (Azure Blob Storage backend for later) ----
+dvc[azure]
+# ---- Utilities ----
+pyyaml
+tqdm
+python-dotenv
+# ---- Notebooks (for EDA + training, run in VS Code) ----
+jupyter
+ipykernel
+# ---- Later phases (serving + testing) - uncomment when we get there ----
+# fastapi
+# uvicorn
+# pytest
+ 
