@@ -24,4 +24,8 @@ ipykernel
 # fastapi
 # uvicorn
 # pytest
- 
+
+mlflow
+dagshub
+
+pytest

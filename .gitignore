@@ -9,5 +9,11 @@ wheels/
 # Virtual environments
 .venv
 data/raw/
-notes.ipynb
+data/cache/
 old_notebooks/
+.env
+notes/
+
+models/
+reports/*.pt
+.pytest_cache/

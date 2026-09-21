@@ -1,0 +1,43 @@
+data:
+  n_channels: 9
+  seq_len: 128
+  n_folds: 5
+  seed: 42
+
+paths:
+  raw: data/raw/battery_dataset1
+  processed: data/processed
+  cache: data/cache
+  models: models
+  reports: reports
+  figures: reports/figures
+
+mlflow:
+  repo_owner: RutikaKadam10
+  repo_name: ev-battery-capacity-prediction
+
+lstm:
+  hidden: 32
+  fc_hidden: 64
+  dropout: 0.5
+  pooling: last
+  lr: 3.0e-4
+  weight_decay: 1.0e-5
+  batch_size: 256
+  epochs: 80
+  patience: 10
+
+transformer:
+  d_model: 32
+  n_heads: 2
+  n_layers: 1
+  dim_ff: 64
+  dropout: 0.3
+  readout: last
+  use_posenc: true
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  clip: 1.0
+  batch_size: 256
+  epochs: 80
+  patience: 10

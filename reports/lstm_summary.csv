@@ -1,0 +1,5 @@
+model,inputs,rmse,r2
+Mean baseline,none,1.877,-0.052
+Linear regression,mileage,1.095,0.635
+LSTM,128x9 sequence,1.727,0.101
+Reference paper LSTM,128x8 sequence,1.42,
