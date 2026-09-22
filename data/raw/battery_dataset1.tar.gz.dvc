@@ -1,0 +1,5 @@
+outs:
+- md5: 2275beb485c85198cb6b6ff33b5c6816
+  size: 812110847
+  hash: md5
+  path: battery_dataset1.tar.gz
