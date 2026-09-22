@@ -1,0 +1,190 @@
+schema: '2.0'
+stages:
+  cache:
+    cmd: python -m src.data
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: 8d9f8f49760799d7301c5065207f27c4.dir
+      size: 34526591
+      nfiles: 5
+    - path: data/raw/battery_dataset1.tar.gz
+      hash: md5
+      md5: 2275beb485c85198cb6b6ff33b5c6816
+      size: 812110847
+    - path: src/config.py
+      hash: md5
+      md5: a851ae9c640506416c53fa47cf48a74a
+      size: 2709
+    - path: src/data.py
+      hash: md5
+      md5: fdda00bc42d776ea14a0408d5fbac3ee
+      size: 8421
+    params:
+      params.yaml:
+        data.n_channels: 9
+        data.seq_len: 128
+    outs:
+    - path: data/cache/X_9ch.npy
+      hash: md5
+      md5: a3ae56328a3d3d7a6f9f9114f457a835
+      size: 512759936
+    - path: data/cache/cars_9ch.npy
+      hash: md5
+      md5: 3e47253e0ac15976feab0a345660ab2a
+      size: 445232
+    - path: data/cache/mil_9ch.npy
+      hash: md5
+      md5: cd8c2312c66789f241f8511ba4ec4f62
+      size: 445232
+    - path: data/cache/y_9ch.npy
+      hash: md5
+      md5: f720d9e6c881b013c3b34b3717831bf1
+      size: 445232
+  train_lstm:
+    cmd: python -m src.train --model lstm --all-folds --experiment lstm-pipeline
+    deps:
+    - path: data/cache/X_9ch.npy
+      hash: md5
+      md5: a3ae56328a3d3d7a6f9f9114f457a835
+      size: 512759936
+    - path: data/cache/cars_9ch.npy
+      hash: md5
+      md5: 3e47253e0ac15976feab0a345660ab2a
+      size: 445232
+    - path: data/cache/mil_9ch.npy
+      hash: md5
+      md5: cd8c2312c66789f241f8511ba4ec4f62
+      size: 445232
+    - path: data/cache/y_9ch.npy
+      hash: md5
+      md5: f720d9e6c881b013c3b34b3717831bf1
+      size: 445232
+    - path: data/processed
+      hash: md5
+      md5: 8d9f8f49760799d7301c5065207f27c4.dir
+      size: 34526591
+      nfiles: 5
+    - path: src/config.py
+      hash: md5
+      md5: a851ae9c640506416c53fa47cf48a74a
+      size: 2709
+    - path: src/data.py
+      hash: md5
+      md5: fdda00bc42d776ea14a0408d5fbac3ee
+      size: 8421
+    - path: src/evaluate.py
+      hash: md5
+      md5: 0267d6256496345b77d4b3281d4d92c5
+      size: 2277
+    - path: src/models.py
+      hash: md5
+      md5: b81f348c24b5b77e3d905313626998bc
+      size: 7082
+    - path: src/train.py
+      hash: md5
+      md5: b675a9c69f80de233bd1df764417b600
+      size: 11559
+    params:
+      params.yaml:
+        data:
+          n_channels: 9
+          seq_len: 128
+          n_folds: 5
+          seed: 42
+        lstm:
+          hidden: 32
+          fc_hidden: 64
+          dropout: 0.5
+          pooling: last
+          lr: 0.0003
+          weight_decay: 1e-05
+          batch_size: 256
+          epochs: 80
+          patience: 10
+    outs:
+    - path: models/lstm
+      hash: md5
+      md5: d7f2fcaa921efd8dcb265f195b341c4a.dir
+      size: 172725
+      nfiles: 5
+    - path: reports/lstm_metrics.json
+      hash: md5
+      md5: 3c846f0b9ab6ee4f71160cc47f5b2e07
+      size: 284
+  train_transformer:
+    cmd: python -m src.train --model transformer --all-folds --experiment 
+      transformer-pipeline
+    deps:
+    - path: data/cache/X_9ch.npy
+      hash: md5
+      md5: a3ae56328a3d3d7a6f9f9114f457a835
+      size: 512759936
+    - path: data/cache/cars_9ch.npy
+      hash: md5
+      md5: 3e47253e0ac15976feab0a345660ab2a
+      size: 445232
+    - path: data/cache/mil_9ch.npy
+      hash: md5
+      md5: cd8c2312c66789f241f8511ba4ec4f62
+      size: 445232
+    - path: data/cache/y_9ch.npy
+      hash: md5
+      md5: f720d9e6c881b013c3b34b3717831bf1
+      size: 445232
+    - path: data/processed
+      hash: md5
+      md5: 8d9f8f49760799d7301c5065207f27c4.dir
+      size: 34526591
+      nfiles: 5
+    - path: src/config.py
+      hash: md5
+      md5: a851ae9c640506416c53fa47cf48a74a
+      size: 2709
+    - path: src/data.py
+      hash: md5
+      md5: fdda00bc42d776ea14a0408d5fbac3ee
+      size: 8421
+    - path: src/evaluate.py
+      hash: md5
+      md5: 0267d6256496345b77d4b3281d4d92c5
+      size: 2277
+    - path: src/models.py
+      hash: md5
+      md5: b81f348c24b5b77e3d905313626998bc
+      size: 7082
+    - path: src/train.py
+      hash: md5
+      md5: b675a9c69f80de233bd1df764417b600
+      size: 11559
+    params:
+      params.yaml:
+        data:
+          n_channels: 9
+          seq_len: 128
+          n_folds: 5
+          seed: 42
+        transformer:
+          d_model: 32
+          n_heads: 2
+          n_layers: 1
+          dim_ff: 64
+          dropout: 0.3
+          readout: last
+          use_posenc: true
+          lr: 0.0003
+          weight_decay: 0.0001
+          clip: 1.0
+          batch_size: 256
+          epochs: 80
+          patience: 10
+    outs:
+    - path: models/transformer
+      hash: md5
+      md5: 552b7db333e94c39bf1cf8388638d506.dir
+      size: 549400
+      nfiles: 5
+    - path: reports/transformer_metrics.json
+      hash: md5
+      md5: 23bb9702967433fc538394d164214ed6
+      size: 281

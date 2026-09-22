@@ -1,0 +1,77 @@
+# Pipeline: raw data -> cache -> trained models
+#
+#   dvc repro          rebuild only stages whose inputs changed
+#   dvc status         show which stages are out of date, and why
+#   dvc dag            draw the stage graph
+#
+# data/processed (including fold_manifest.json) is a fixed INPUT, tracked with
+# `dvc add`, not produced by a stage. The baselines and both models were scored
+# on that exact fold assignment; if a stage produced it, `dvc repro` could
+# regenerate it and void every comparison.
+
+stages:
+
+  cache:
+    cmd: python -m src.data
+    deps:
+      - src/data.py
+      - src/config.py
+      - data/processed
+      - data/raw/battery_dataset1.tar.gz
+    params:
+      - data.n_channels
+      - data.seq_len
+    outs:
+      # Regenerable in ~2 min, so kept out of the DVC remote (cache: false)
+      - data/cache/X_9ch.npy:
+          cache: false
+      - data/cache/y_9ch.npy:
+          cache: false
+      - data/cache/cars_9ch.npy:
+          cache: false
+      - data/cache/mil_9ch.npy:
+          cache: false
+
+  train_lstm:
+    cmd: python -m src.train --model lstm --all-folds --experiment lstm-pipeline
+    deps:
+      - src/train.py
+      - src/models.py
+      - src/data.py
+      - src/evaluate.py
+      - src/config.py
+      - data/processed
+      - data/cache/X_9ch.npy
+      - data/cache/y_9ch.npy
+      - data/cache/cars_9ch.npy
+      - data/cache/mil_9ch.npy
+    params:
+      - data
+      - lstm
+    outs:
+      - models/lstm
+    metrics:
+      - reports/lstm_metrics.json:
+          cache: false
+
+  train_transformer:
+    cmd: python -m src.train --model transformer --all-folds --experiment transformer-pipeline
+    deps:
+      - src/train.py
+      - src/models.py
+      - src/data.py
+      - src/evaluate.py
+      - src/config.py
+      - data/processed
+      - data/cache/X_9ch.npy
+      - data/cache/y_9ch.npy
+      - data/cache/cars_9ch.npy
+      - data/cache/mil_9ch.npy
+    params:
+      - data
+      - transformer
+    outs:
+      - models/transformer
+    metrics:
+      - reports/transformer_metrics.json:
+          cache: false
