@@ -29,3 +29,5 @@ mlflow
 dagshub
 
 pytest
+
+azure-cli
