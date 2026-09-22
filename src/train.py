@@ -15,16 +15,19 @@ import json
 import os
 import subprocess
 import time
+from pathlib import Path
 
 import mlflow
 import numpy as np
+import yaml
 import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.metrics import mean_squared_error
 
-from src.config import (DATA, LSTM, MLFLOW, MODELS_DIR, REPORTS_DIR,
-                        TRANSFORMER, ensure_dirs, get_device, set_seed)
+from src.config import (DATA, LSTM, MLFLOW, MODELS_DIR, PROCESSED_DIR,
+                        RAW_ARCHIVE, REPORTS_DIR, TRANSFORMER, ensure_dirs,
+                        get_device, set_seed)
 from src.data import build_cache, make_loaders
 from src.evaluate import band_metrics, metrics, predict
 from src.models import build_model, count_params
@@ -155,6 +158,26 @@ def setup_mlflow(experiment: str) -> None:
     mlflow.set_experiment(experiment)
 
 
+def dvc_hash(pointer: Path) -> str:
+    """Read the md5 recorded in a .dvc pointer file.
+
+    Logged with every run so a result in MLflow traces back to the exact data
+    that produced it. The git commit pins the code; this pins the data.
+    """
+    try:
+        with open(pointer) as f:
+            return yaml.safe_load(f)["outs"][0]["md5"]
+    except (OSError, KeyError, IndexError, TypeError):
+        return "untracked"
+
+
+def data_versions() -> dict:
+    return {
+        "data_processed_md5": dvc_hash(PROCESSED_DIR.with_suffix(".dvc")),
+        "data_raw_md5": dvc_hash(RAW_ARCHIVE.with_name(RAW_ARCHIVE.name + ".dvc")),
+    }
+
+
 def git_commit() -> str:
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"],
@@ -165,7 +188,8 @@ def git_commit() -> str:
 
 def log_fold(name, fold, p, met, extras, history, bands, ckpt):
     mlflow.log_params({**p, "model": name, "fold": fold,
-                       "n_features": DATA["n_channels"], "seed": DATA["seed"] + fold})
+                       "n_features": DATA["n_channels"], "seed": DATA["seed"] + fold,
+                       **data_versions()})
 
     for ep, (tl, vr, lr_) in enumerate(zip(history["train_loss"],
                                            history["val_rmse"], history["lr"])):
@@ -206,6 +230,7 @@ def run(name: str, folds: list[int], experiment: str | None,
         setup_mlflow(experiment)
         parent = mlflow.start_run(run_name=f"{name}-{len(folds)}fold")
         mlflow.set_tags({"git_commit": git_commit(), "source": "src/train.py"})
+        mlflow.log_params(data_versions())
 
     rows, band_rows = [], []
     try:

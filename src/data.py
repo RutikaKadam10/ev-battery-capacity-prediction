@@ -7,13 +7,17 @@ Usage:
 """
 
 import json
+import sys
+import tarfile
+from pathlib import Path
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from src.config import CACHE_DIR, DATA, MANIFEST_PATH, ensure_dirs
+from src.config import (CACHE_DIR, DATA, MANIFEST_PATH, RAW_ARCHIVE,
+                        RAW_DIR, RAW_SNIPPETS_DIR, ensure_dirs)
 
 
 # ---------------------------------------------------------------------------
@@ -24,6 +28,43 @@ def load_manifest() -> dict:
     """Read the fixed fold assignment produced in notebook 03."""
     with open(MANIFEST_PATH) as f:
         return json.load(f)
+
+
+def snippet_path(stored: str) -> Path:
+    """Resolve a snippet path from the manifest.
+
+    The manifest was written from notebooks/, so it stores paths like
+    '../data/raw/battery_dataset1/data/178799.pkl'. Relative to the repo root
+    that points outside the project. Only the filename is trusted; the folder
+    comes from params.yaml.
+    """
+    return RAW_SNIPPETS_DIR / Path(stored).name
+
+
+def ensure_raw_extracted() -> None:
+    """Extract the raw archive if the snippet folder is missing.
+
+    DVC tracks the single .tar.gz rather than 629k individual files, so on a
+    fresh clone (or in CI) the folder has to be rebuilt from the archive.
+    """
+    if RAW_SNIPPETS_DIR.exists():
+        return
+    if not RAW_ARCHIVE.exists():
+        raise FileNotFoundError(
+            f"Neither {RAW_SNIPPETS_DIR} nor {RAW_ARCHIVE} exists. Run: dvc pull"
+        )
+    print(f"extracting {RAW_ARCHIVE.name} ...")
+    with tarfile.open(RAW_ARCHIVE, "r:gz") as tar:
+        # filter='data' blocks absolute paths and '..' entries in the archive
+        tar.extractall(RAW_DIR.parent, filter="data")
+
+
+def verify_manifest_paths() -> tuple[int, int]:
+    """Count manifest paths that resolve to real files. Returns (found, total)."""
+    manifest = load_manifest()
+    paths = [snippet_path(p) for files in manifest["files"].values() for p in files]
+    found = sum(p.exists() for p in paths)
+    return found, len(paths)
 
 
 # ---------------------------------------------------------------------------
@@ -48,9 +89,10 @@ def build_cache(n_channels: int = DATA["n_channels"]) -> dict:
     if all(p.exists() for p in files.values()):
         X, y, cars, mil = (np.load(files[k]) for k in ("X", "y", "cars", "mil"))
     else:
+        ensure_raw_extracted()
         paths, path_cars = [], []
         for car, car_files in manifest["files"].items():
-            paths.extend(car_files)
+            paths.extend(snippet_path(p) for p in car_files)
             path_cars.extend([int(car)] * len(car_files))
 
         n = len(paths)
@@ -159,6 +201,11 @@ def make_loaders(data: dict, test_fold: int, batch_size: int):
 
 
 if __name__ == "__main__":
+    if "--verify-paths" in sys.argv:
+        found, total = verify_manifest_paths()
+        print(f"manifest paths resolved: {found:,} / {total:,}")
+        sys.exit(0 if found == total else 1)
+
     data = build_cache()
     print(f"X      {data['X'].shape}  {data['X'].nbytes / 1024**2:.0f} MB")
     print(f"y      {data['y'].min():.2f} - {data['y'].max():.2f} Ah "

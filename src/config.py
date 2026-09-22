@@ -35,6 +35,8 @@ MLFLOW = PARAMS["mlflow"]
 _p = {k: ROOT / v for k, v in PARAMS["paths"].items()}
 RAW_DIR = _p["raw"]
 RAW_SNIPPETS_DIR = RAW_DIR / "data"
+# DVC tracks the archive, not the 629k extracted files; data.py extracts on demand
+RAW_ARCHIVE = RAW_DIR.with_name(RAW_DIR.name + ".tar.gz")
 PROCESSED_DIR = _p["processed"]
 CACHE_DIR = _p["cache"]
 MODELS_DIR = _p["models"]
@@ -73,7 +75,8 @@ def ensure_dirs() -> None:
 
 if __name__ == "__main__":
     print(f"root      {ROOT}")
-    for name, path in [("raw", RAW_DIR), ("processed", PROCESSED_DIR),
+    for name, path in [("archive", RAW_ARCHIVE), ("raw", RAW_DIR),
+                       ("processed", PROCESSED_DIR),
                        ("cache", CACHE_DIR), ("manifest", MANIFEST_PATH),
                        ("models", MODELS_DIR), ("reports", REPORTS_DIR)]:
         print(f"{name:<10}{path}  {'ok' if path.exists() else 'MISSING'}")

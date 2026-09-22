@@ -5,8 +5,9 @@ import json
 import numpy as np
 import pytest
 
-from src.config import MANIFEST_PATH
-from src.data import SnippetDataset, fit_scaler, split_indices
+from src.config import MANIFEST_PATH, RAW_SNIPPETS_DIR
+from src.data import (SnippetDataset, fit_scaler, snippet_path, split_indices,
+                      verify_manifest_paths)
 
 
 @pytest.fixture
@@ -92,6 +93,7 @@ def test_training_split_is_standardised(synthetic):
     scaler = fit_scaler(synthetic["X"][tr], synthetic["y"][tr])
     ds = SnippetDataset(synthetic["X"], synthetic["y"], tr, scaler)
 
+    # float32 accumulation over ~900k values leaves residuals of ~1e-4
     np.testing.assert_allclose(ds.X.mean(axis=(0, 1)), 0, atol=1e-3)
     np.testing.assert_allclose(ds.X.std(axis=(0, 1)), 1, atol=1e-3)
     assert abs(ds.y.mean()) < 1e-3
@@ -116,3 +118,23 @@ def test_constant_channel_does_not_divide_by_zero(synthetic):
     ds = SnippetDataset(X, synthetic["y"], tr, scaler)
 
     assert np.isfinite(ds.X).all()
+
+
+# ---------------------------------------------------------------------------
+# Manifest paths
+# ---------------------------------------------------------------------------
+
+def test_snippet_path_ignores_stored_directory():
+    """Manifest paths were written relative to notebooks/. Only the filename
+    may be used, whatever prefix was stored."""
+    for stored in ("../data/raw/battery_dataset1/data/178799.pkl",
+                   "/some/other/machine/178799.pkl",
+                   "178799.pkl"):
+        assert snippet_path(stored) == RAW_SNIPPETS_DIR / "178799.pkl"
+
+
+def test_every_manifest_path_resolves():
+    if not (MANIFEST_PATH.exists() and RAW_SNIPPETS_DIR.exists()):
+        pytest.skip("manifest or extracted raw data not present")
+    found, total = verify_manifest_paths()
+    assert found == total, f"{total - found:,} snippet files missing"
