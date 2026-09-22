@@ -2,3 +2,5 @@
     remote = azure
 ['remote "azure"']
     url = azure://dvc-store
+['remote "dagshub"']
+    url = https://dagshub.com/RutikaKadam10/ev-battery-capacity-prediction.dvc
