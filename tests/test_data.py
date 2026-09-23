@@ -6,8 +6,13 @@ import numpy as np
 import pytest
 
 from src.config import MANIFEST_PATH, RAW_SNIPPETS_DIR
-from src.data import (SnippetDataset, fit_scaler, snippet_path, split_indices,
-                      verify_manifest_paths)
+from src.data import (
+    SnippetDataset,
+    fit_scaler,
+    snippet_path,
+    split_indices,
+    verify_manifest_paths,
+)
 
 
 @pytest.fixture

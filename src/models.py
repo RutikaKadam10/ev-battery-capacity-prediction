@@ -12,10 +12,9 @@ Usage:
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from src.config import DATA, LSTM, TRANSFORMER
-
 
 # ---------------------------------------------------------------------------
 # LSTM

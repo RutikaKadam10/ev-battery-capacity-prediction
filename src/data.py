@@ -16,9 +16,15 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from src.config import (CACHE_DIR, DATA, MANIFEST_PATH, RAW_ARCHIVE,
-                        RAW_DIR, RAW_SNIPPETS_DIR, ensure_dirs)
-
+from src.config import (
+    CACHE_DIR,
+    DATA,
+    MANIFEST_PATH,
+    RAW_ARCHIVE,
+    RAW_DIR,
+    RAW_SNIPPETS_DIR,
+    ensure_dirs,
+)
 
 # ---------------------------------------------------------------------------
 # Fold manifest

@@ -19,15 +19,25 @@ from pathlib import Path
 
 import mlflow
 import numpy as np
-import yaml
 import pandas as pd
 import torch
-import torch.nn as nn
+import yaml
 from sklearn.metrics import mean_squared_error
+from torch import nn
 
-from src.config import (DATA, LSTM, MLFLOW, MODELS_DIR, PROCESSED_DIR,
-                        RAW_ARCHIVE, REPORTS_DIR, TRANSFORMER, ensure_dirs,
-                        get_device, set_seed)
+from src.config import (
+    DATA,
+    LSTM,
+    MLFLOW,
+    MODELS_DIR,
+    PROCESSED_DIR,
+    RAW_ARCHIVE,
+    REPORTS_DIR,
+    TRANSFORMER,
+    ensure_dirs,
+    get_device,
+    set_seed,
+)
 from src.data import build_cache, make_loaders
 from src.evaluate import band_metrics, metrics, predict
 from src.models import build_model, count_params
@@ -49,7 +59,7 @@ def train_fold(name: str, data: dict, fold: int, p: dict, device,
     # Seed per fold, so any fold can be rerun alone and reproduce itself.
     set_seed(DATA["seed"] + fold)
 
-    loaders, scaler, (tr, va, te) = make_loaders(data, fold, p["batch_size"])
+    loaders, scaler, (_tr, _va, te) = make_loaders(data, fold, p["batch_size"])
     model = build_model(name, n_features=DATA["n_channels"], params=p).to(device)
 
     criterion = nn.MSELoss()
@@ -182,7 +192,7 @@ def git_commit() -> str:
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"],
                                        stderr=subprocess.DEVNULL).decode().strip()
-    except Exception:
+    except (subprocess.SubprocessError, OSError, FileNotFoundError):
         return "unknown"
 
 
@@ -228,7 +238,7 @@ def run(name: str, folds: list[int], experiment: str | None,
     use_mlflow = experiment is not None
     if use_mlflow:
         setup_mlflow(experiment)
-        parent = mlflow.start_run(run_name=f"{name}-{len(folds)}fold")
+        mlflow.start_run(run_name=f"{name}-{len(folds)}fold")
         mlflow.set_tags({"git_commit": git_commit(), "source": "src/train.py"})
         mlflow.log_params(data_versions())
 

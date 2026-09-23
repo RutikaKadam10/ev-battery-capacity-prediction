@@ -1,0 +1,72 @@
+# Builds the serving image and pushes it to Azure Container Registry.
+#
+# Requires these repository secrets (Settings -> Secrets and variables -> Actions):
+#   ACR_LOGIN_SERVER   e.g. evbatteryacr.azurecr.io
+#   ACR_USERNAME       from: az acr credential show --name evbatteryacr
+#   ACR_PASSWORD       likewise
+#   DAGSHUB_TOKEN      to pull the checkpoint from the DVC remote
+#
+# Until the registry exists (Phase 6), run this manually from the Actions tab
+# rather than on every push.
+
+name: Build and push image
+
+on:
+  workflow_dispatch:        # manual trigger; swap to `push: branches: [main]` later
+
+env:
+  IMAGE_NAME: ev-battery-serve
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install DVC
+        run: pip install "dvc[http]"
+
+      - name: Pull the trained checkpoint
+        # Only the model is pulled, not the 1.3 GB dataset. Dagshub is used
+        # rather than Azure Blob because it needs nothing but a token.
+        env:
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          dvc remote modify --local dagshub auth basic
+          dvc remote modify --local dagshub user RutikaKadam10
+          dvc remote modify --local dagshub password "$DAGSHUB_TOKEN"
+          dvc pull -r dagshub models/lstm
+
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.serve
+          platforms: linux/amd64        # Azure Container Apps is x86_64
+          push: true
+          # Tagged with the commit SHA as well as `latest`: `latest` is
+          # ambiguous, while a SHA ties a running container to exact code.
+          tags: |
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "Pushed ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:${{ github.sha }}" \
+            >> $GITHUB_STEP_SUMMARY
