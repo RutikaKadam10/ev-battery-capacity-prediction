@@ -1,0 +1,52 @@
+# Serving image: FastAPI + the trained model. No training code or data.
+#
+#   docker build -f Dockerfile.serve -t ev-battery-serve .
+#   docker run -p 8080:8000 ev-battery-serve
+#   curl http://localhost:8080/health
+
+# --- stage 1: install dependencies -----------------------------------------
+# Build tools and pip caches stay in this stage and never reach the final image.
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+COPY requirements-serve.txt .
+
+# CPU-only torch. The default PyPI wheel bundles CUDA libraries (~2.5 GB)
+# that are dead weight without an NVIDIA GPU.
+RUN pip install --no-cache-dir --user \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        -r requirements-serve.txt
+
+# --- stage 2: runtime ------------------------------------------------------
+FROM python:3.11-slim
+
+# Run as a non-root user: a compromised container then has no root inside it.
+RUN useradd --create-home --uid 1000 appuser
+WORKDIR /app
+
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+
+# Only what the API needs at runtime
+COPY --chown=appuser:appuser params.yaml ./
+COPY --chown=appuser:appuser src/__init__.py src/config.py src/models.py \
+                             src/predict.py src/api.py ./src/
+
+# The checkpoint. Requires `dvc pull` before building if models/ is empty.
+COPY --chown=appuser:appuser models/lstm/fold0.pt ./models/lstm/fold0.pt
+
+USER appuser
+ENV PATH=/home/appuser/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    MODEL_PATH=/app/models/lstm/fold0.pt \
+    PORT=8000
+
+EXPOSE 8000
+
+# Orchestrators use this to tell "running" from "actually serving".
+# curl isn't in the slim image, so use Python.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request,os,sys; \
+sys.exit(0 if urllib.request.urlopen(f\"http://localhost:{os.environ['PORT']}/health\").status==200 else 1)"
+
+# Shell form so $PORT is expanded. Azure Container Apps sets it.
+CMD uvicorn src.api:app --host 0.0.0.0 --port ${PORT}

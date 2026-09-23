@@ -1,0 +1,16 @@
+# Serving dependencies only.
+#
+# src/api.py imports src/config.py, src/models.py and src/predict.py, which
+# between them need torch, numpy and pyyaml. It does NOT import src/data.py,
+# src/evaluate.py or src/train.py, so pandas, scikit-learn, tqdm, mlflow, dvc
+# and matplotlib are all unnecessary here.
+#
+# torch is installed from the CPU-only index in the Dockerfile: the default
+# PyPI wheel bundles CUDA libraries (~2.5 GB) that are useless without an
+# NVIDIA GPU.
+
+fastapi
+uvicorn[standard]
+numpy
+pyyaml
+torch

@@ -1,0 +1,22 @@
+# Keep the build context small. Without this, Docker sends ~2 GB of data,
+# caches and virtualenv to the build daemon on every build.
+
+.git/
+.dvc/cache/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+data/
+!data/processed/fold_manifest.json
+
+notebooks/
+docs/
+reports/figures/
+old_notebooks/
+notes/
+
+.env
+*.md
+!README.md

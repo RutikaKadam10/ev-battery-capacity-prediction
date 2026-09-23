@@ -1,0 +1,34 @@
+# Training image: the full stack, for running the pipeline anywhere.
+#
+#   docker build -f Dockerfile.train -t ev-battery-train .
+#   docker run --rm \
+#       -e MLFLOW_TRACKING_URI -e MLFLOW_TRACKING_USERNAME -e MLFLOW_TRACKING_PASSWORD \
+#       -v "$PWD/data:/app/data" -v "$PWD/models:/app/models" \
+#       ev-battery-train --model lstm --all-folds
+#
+# Data is mounted rather than copied: it is 1.3 GB and versioned by DVC, so
+# baking it into the image would make the image huge and immediately stale.
+
+FROM python:3.11-slim
+
+# git is needed by DVC, and by train.py to record the commit on each run
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir \
+        --extra-index-url https://download.pytorch.org/whl/cpu \
+        -r requirements.txt
+
+COPY params.yaml dvc.yaml ./
+COPY src/ ./src/
+COPY tests/ ./tests/
+
+ENV PYTHONUNBUFFERED=1
+
+# MLflow credentials come from the environment here: dagshub.init() opens a
+# browser for OAuth, which no container has.
+ENTRYPOINT ["python", "-m", "src.train"]
+CMD ["--model", "lstm", "--all-folds"]
