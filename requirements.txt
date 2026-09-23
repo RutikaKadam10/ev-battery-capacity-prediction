@@ -30,4 +30,3 @@ dagshub
 
 pytest
 
-azure-cli
